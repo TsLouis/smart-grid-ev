@@ -4,11 +4,6 @@
 /OD_Estimation/
 /data/
 
-# --- Generated outputs ---
-/reports/
-/output_runtime_dashboard/
-/output_topology_canvas/
-
 # --- Python ---
 __pycache__/
 *.py[cod]
