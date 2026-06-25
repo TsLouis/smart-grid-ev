@@ -1,0 +1,41 @@
+[build-system]
+requires = [ "hatchling",]
+build-backend = "hatchling.build"
+
+[project]
+name = "v2sim"
+version = "1.5.0b2"
+dependencies = [ "feasytools>=0.1.4", "fpowerkit>=0.4.3", "networkx>=3.2.1", "numpy", "matplotlib", "pyproj", "requests", "cloudpickle", "sumolib", "dill", "libsumo", "scipy",]
+requires-python = ">= 3.9"
+license = "BSD-3-Clause"
+description = "V2Sim: An Open-Source V2G Simulation Platform in Urban Power and Transportation Network"
+
+[project.scripts]
+v2sim-gui = "v2sim.app.gui_main:main"
+v2sim-para = "v2sim.app.gui_para:main"
+v2sim-viewer = "v2sim.app.gui_viewer:main"
+v2sim = "v2sim.app.sim_single:main"
+v2sim-advplot = "v2sim.app.cmd_advplot:main"
+v2sim-convert = "v2sim.app.cmd_convert:main"
+v2sim-csquery = "v2sim.app.cmd_csquery:main"
+v2sim-gen-cs = "v2sim.app.cmd_gen_cs:main"
+v2sim-gen-trip = "v2sim.app.cmd_gen_trip:main"
+v2sim-plot = "v2sim.app.cmd_plot:main"
+v2sim-osm = "v2sim.app.gui_osm:entry"
+v2sim-split = "v2sim.app.cmd_split:main"
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+Homepage = "https://github.com/hesl-seu/v2sim"
+Documentation = "https://hesl-seu.github.io/v2sim-wiki/"
+Repository = "https://github.com/hesl-seu/v2sim"
+Issues = "https://github.com/hesl-seu/v2sim/issues"
+
+[project.optional-dependencies]
+pdn = [ "cvxpy", "cbc",]
+
+[tool.hatch.build]
+include = [ "v2sim/*",]

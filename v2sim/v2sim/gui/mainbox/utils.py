@@ -1,0 +1,49 @@
+from v2sim.gui.common import *
+
+import functools
+
+_L = LangLib.Load(__file__)
+
+V2SIM_DIR = Path(__file__).parent.parent.parent
+SIM_YES = "YES"
+SIM_NO = "NO"
+
+def showerr(msg:str):
+    MB.showerror(_L["MB_ERROR"], msg)
+
+def showwarn(msg:str):
+    MB.showwarning(_L["MB_INFO"], msg)
+
+def try_int(s:str, name:str) -> int:
+    try: return int(s)
+    except: raise ValueError(f"Invalid {name}. Must be an integer.")
+
+def try_float(s:str, name:str) -> float:
+    try: return float(s)
+    except: raise ValueError(f"Invalid {name}. Must be a float.")
+
+def try_split(s:str, name:str, sep:str=',') -> List[str]:
+    try:
+        parts = s.split(sep)
+        parts = [p.strip() for p in parts if p.strip()]
+        return parts
+    except:
+        raise ValueError(f"Invalid {name}. Must be a list of strings separated by '{sep}'.")
+
+def errwrapper(func):
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            import traceback
+            save_to = V2SIM_DIR / "error.log"
+            with open(save_to, "a", encoding="utf-8") as f:
+                f.write(traceback.format_exc())
+                f.write("\n")
+                f.write(str(type(e)) + ": " + str(e))
+            showerr(str(e))
+            print(f"An error occurred. Details saved to {save_to}")
+    return wrapped
+
+__all__ = ["showerr", "showwarn", "try_int", "try_float", "try_split", "errwrapper", "SIM_YES", "SIM_NO", "V2SIM_DIR"]

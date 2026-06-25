@@ -1,0 +1,138 @@
+from v2sim.gui.common import *
+from collections import defaultdict
+from v2sim import load_external_components, PLUGINS_DIR, get_internal_components
+from v2sim.plugins import PluginHelper
+
+
+_ = LangLib.Load(__file__)
+
+
+class PlgBox(Tk):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.title(_("TITLE"))
+        self.geometry("640x480")
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+
+        tree = Treeview(self)
+        # hide the column headings, show only the tree column
+        tree["show"] = "tree"
+        # ensure the tree column (#0) expands to fill available space
+        tree.column("#0", anchor="w", stretch=True)
+        tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=(10, 0))
+
+        vsb = Scrollbar(self, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=vsb.set)
+        vsb.grid(row=0, column=1, sticky="ns")
+
+        def refresh_tree(confirm_have:str = ""):
+            confirm_have_exists = False
+            for iid in tree.get_children():
+                tree.delete(iid)
+            
+            # Load internal components
+            plgs_i, stas_i = get_internal_components()
+            key_id = tree.insert('', 'end', text=_("INTERNAL"), open=False)
+            for k, p, d in plgs_i:
+                d_str = ','.join(d) if d else _("PLUGIN_NO_DEP")
+                tree.insert(key_id, 'end', text=_("PLUGIN_ITEM").format(k, p.__name__, d_str))
+            for k, p in stas_i:
+                tree.insert(key_id, 'end', text=_("STA_ITEM").format(k, p.__name__))
+
+            # Load external components
+            plgs, stas = load_external_components()
+            combined = defaultdict(list)
+            for k, v in plgs.items():
+                d_str = ','.join(v[2]) if v[2] else _("PLUGIN_NO_DEP")
+                combined[k].append(_("PLUGIN_ITEM").format(v[0], v[1].__name__, d_str))
+            for k, v in stas.items():
+                combined[k].append(_("STA_ITEM").format(v[0], v[1].__name__))
+
+            for key, val in combined.items():
+                if (PLUGINS_DIR / f"{key}.py").exists():
+                    fname = f"{key}.py"
+                elif (PLUGINS_DIR / f"{key}.link").exists():
+                    fname = f"{key}.link"
+                else:
+                    raise RuntimeError("Internal error: plugin/statistics file not found.")
+                
+                key_id = tree.insert('', 'end', text=fname, open=False)
+                if key == confirm_have:
+                    confirm_have_exists = True
+                for v in val:
+                    tree.insert(key_id, 'end', text=v)
+            return confirm_have_exists
+        
+        def on_import(link = False):
+            src = filedialog.askopenfilename(title=_("IMPORT_PLUGIN_TITLE"), filetypes=[(_("Python files"), "*.py")])
+            if not src: return
+            
+            try:
+                success = PluginHelper.add_plugin(src, as_link=link)
+                if not success:
+                    raise RuntimeError(_("ERROR_FILE_EXISTS"))
+                plg_name = Path(src).stem
+                if refresh_tree(plg_name):
+                    MB.showinfo(_("INFO"), _("IMPORT_SUCCESS").format(plg_name))
+                else:
+                    MB.showwarning(_("WARNING"), _("IMPORT_BUT_NOT_LOADED").format(plg_name))
+            except Exception as e:
+                MB.showerror(_("ERROR"), str(e))
+        
+        def on_import_link():
+            on_import(link=True)
+
+        def on_delete():
+            sel = tree.selection()
+            if not sel:
+                return
+            sel_id = sel[0]
+            if tree.parent(sel_id) != '':
+                MB.showwarning(_("WARNING"), _("DELETE_ONLY_TOPLEVEL"))
+                return
+
+            text = tree.item(sel_id, "text")  # like "name.py"
+            if not text:
+                return
+            if not MB.askyesno(_("CONFIRM"), _("CONFIRM_DELETE").format(text)):
+                return
+
+            file = PLUGINS_DIR / text  # keep extension
+            try:
+                PluginHelper.del_plugin(Path(file).stem)
+                MB.showinfo(_("INFO"), _("DELETE_SUCCESS"))
+                refresh_tree()
+            except Exception as e:
+                MB.showerror(_("ERROR"), str(e))
+
+        def on_tree_select(event=None):
+            sel = tree.selection()
+            state = "disabled"
+            if len(sel) == 1 and tree.parent(sel[0]) == '':
+                text = tree.item(sel[0], "text")
+                if text and text != _("INTERNAL"):
+                    state = "normal"
+            btn_delete.config(state=state)
+
+        # buttons frame
+        btn_frame = Frame(self)
+        btn_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(5, 10))
+
+        btn_import = Button(btn_frame, text=_("IMPORT_BUTTON"), command=on_import)
+        btn_import.pack(side="left", padx=(0, 4))
+
+        btn_import_link = Button(btn_frame, text=_("IMPORT_LINK_BUTTON"), command=on_import_link)
+        btn_import_link.pack(side="left", padx=(0, 4))
+
+        btn_delete = Button(btn_frame, text=_("DELETE_BUTTON"), command=on_delete, state="disabled")
+        btn_delete.pack(side="left")
+
+        # bind selection change
+        tree.bind("<<TreeviewSelect>>", on_tree_select)
+
+        # initial enable/disable state
+        on_tree_select()
+
+        # make sure the tree reflects any changes (in case import/delete used internal APIs)
+        refresh_tree()
