@@ -3,6 +3,10 @@
 /Load Forecasting/
 /OD_Estimation/
 /data/
+/ev_charging_v1/交通流数据/
+/ev_charging_v1/Load Forecasting/
+/ev_charging_v1/OD_Estimation/
+/ev_charging_v1/data/
 
 # --- Python ---
 __pycache__/
@@ -29,3 +33,4 @@ env/
 # --- OS ---
 .DS_Store
 Thumbs.db
+.gitnexus
